@@ -27,7 +27,7 @@ void main() async {
       ],
       child: MaterialApp(
         theme: ThemeData(
-          colorSchemeSeed: Colors.purple,
+          colorSchemeSeed: Color.fromARGB(255, 0, 187, 44),
           useMaterial3: true,
         ),
         debugShowCheckedModeBanner: false,
@@ -59,8 +59,11 @@ class _LoginPageState extends State<LoginPage> {
       return ChatPage();
     }
     return Scaffold(
+      backgroundColor: Color.fromARGB(255, 255, 255, 255),
       appBar: AppBar(
-        title: Text('FlutterFire'),
+        title: Center(
+          child: Text('FlutterZap'),
+        ),
       ),
       body: Padding(
         padding: EdgeInsets.all(32.0),
@@ -170,6 +173,7 @@ class LoginModel {
   }
 }
 
+// Página de chat do aplicativo
 class ChatPage extends StatelessWidget {
   const ChatPage({super.key});
 
@@ -177,7 +181,7 @@ class ChatPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Mensagens'),
+        title: Text('Home'),
         actions: [
           IconButton(
             onPressed: () async {
@@ -187,17 +191,17 @@ class ChatPage extends StatelessWidget {
           ),
         ],
       ),
-      body: Center(
-          child: ListView(
+      body: ListView(
         children: const [
           ListTile(
-            title: Text('Olá, mundo!'),
-            subtitle: Text('Bem-vindo ao FlutterFire!'),
+            title: Text('Bem vindo!'),
+            subtitle: Text('Você ainda não possui contatos!'),
           ),
         ],
-      )),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
+          // Botão para navegar para a página de contatos
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => ContactPage(),
@@ -210,6 +214,7 @@ class ChatPage extends StatelessWidget {
   }
 }
 
+// Provedor de autenticação
 class AuthProvider extends ChangeNotifier {
   User? _user;
 
@@ -226,6 +231,7 @@ class AuthProvider extends ChangeNotifier {
   bool get isAuthenticated => user != null;
 }
 
+// Página de contatos do aplicativo
 class ContactPage extends StatelessWidget {
   const ContactPage({super.key});
 
@@ -244,6 +250,7 @@ class ContactPage extends StatelessWidget {
       );
     }
 
+    // Obtenha a lista de usuários do provedor de banco de dados
     Map<String, dynamic> users = jsonDecode(databaseProvider.users);
     List<Map<String, String>> userList = [];
 
@@ -254,6 +261,7 @@ class ContactPage extends StatelessWidget {
       });
     });
 
+    // Remova o usuário atual da lista de contatos
     userList.removeWhere(
         (user) => user['uid'] == FirebaseAuth.instance.currentUser!.uid);
 
@@ -267,6 +275,7 @@ class ContactPage extends StatelessWidget {
           return ListTile(
             title: Text(user['email']!),
             onTap: () {
+              // Navegue para a página de detalhes da mensagem ao tocar em um contato
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => MessageDetails(
@@ -283,6 +292,7 @@ class ContactPage extends StatelessWidget {
   }
 }
 
+// Provedor de banco de dados
 class DatabaseProvider extends ChangeNotifier {
   String _users = '{}';
 
@@ -328,12 +338,13 @@ class _MessageDetailsState extends State<MessageDetails> {
                 stream: FirebaseDatabase.instance
                     .ref()
                     .child('messages')
-                    .child('${FirebaseAuth.instance.currentUser!.uid}_${widget.uid}')
+                    .child(
+                        '${FirebaseAuth.instance.currentUser!.uid}_${widget.uid}')
                     .onValue,
                 builder: (context, snapshot) {
                   if (snapshot.hasData) {
-                    Map<String, dynamic> messages =
-                        jsonDecode(jsonEncode(snapshot.data!.snapshot.value ?? {}));
+                    Map<String, dynamic> messages = jsonDecode(
+                        jsonEncode(snapshot.data!.snapshot.value ?? {}));
                     List<Map<String, String>> messageList = [];
 
                     messages.forEach((uid, details) {
@@ -347,22 +358,40 @@ class _MessageDetailsState extends State<MessageDetails> {
 
                     return ListView(
                       children: messageList.map((message) {
-                        return ListTile(
-                          title: Text(
-                            textAlign: message['sender'] == FirebaseAuth.instance.currentUser!.uid ? TextAlign.right : TextAlign.left,
-                            style: TextStyle(
-                              color: const Color.fromARGB(255, 76, 76, 76),
-                              fontSize: 16,
+                        final isCurrentUser = message['sender'] ==
+                            FirebaseAuth.instance.currentUser!.uid;
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: isCurrentUser
+                                ? Color.fromARGB(255, 128, 225, 188)
+                                : Color.fromARGB(255, 180, 181, 181),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          margin: const EdgeInsets.symmetric(
+                              vertical: 4, horizontal: 8),
+                          padding: const EdgeInsets.all(8),
+                          child: ListTile(
+                            title: Text(
+                              message['message']!,
+                              textAlign: isCurrentUser
+                                  ? TextAlign.right
+                                  : TextAlign.left,
+                              style: const TextStyle(
+                                color: Color.fromARGB(255, 76, 76, 76),
+                                fontSize: 16,
+                              ),
                             ),
-                            message['message']!
+                            subtitle: Text(
+                              message['email']!,
+                              textAlign: isCurrentUser
+                                  ? TextAlign.right
+                                  : TextAlign.left,
+                              style: const TextStyle(
+                                color: Color.fromARGB(255, 76, 76, 76),
+                                fontSize: 8,
+                              ),
                             ),
-                          subtitle: Text(
-                            textAlign: message['sender'] == FirebaseAuth.instance.currentUser!.uid ? TextAlign.right : TextAlign.left,
-                            style: TextStyle(
-                              color: const Color.fromARGB(255, 76, 76, 76),
-                              fontSize: 8,
-                            ),
-                            message['email']!),
+                          ),
                         );
                       }).toList(),
                     );
@@ -392,17 +421,19 @@ class _MessageDetailsState extends State<MessageDetails> {
                       await FirebaseDatabase.instance
                           .ref()
                           .child('messages')
-                          .child('${FirebaseAuth.instance.currentUser!.uid}_${widget.uid}')
+                          .child(
+                              '${FirebaseAuth.instance.currentUser!.uid}_${widget.uid}')
                           .push()
                           .set({
                         'message': textController.text,
                         'sender': FirebaseAuth.instance.currentUser!.uid,
                         'email': FirebaseAuth.instance.currentUser!.email,
                       });
-                       await FirebaseDatabase.instance
+                      await FirebaseDatabase.instance
                           .ref()
                           .child('messages')
-                          .child('${widget.uid}_${FirebaseAuth.instance.currentUser!.uid}')
+                          .child(
+                              '${widget.uid}_${FirebaseAuth.instance.currentUser!.uid}')
                           .push()
                           .set({
                         'message': textController.text,
